@@ -1,133 +1,182 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+#
+# Copyright (c) 2012, Luca Burgazzoli
+# All rights reserved.
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met: 
+# 
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer. 
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution. 
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
 
 import os
 import sys
-import gtk
-import appindicator as AI
-import xml.etree.ElementTree as ET
+import argparse
 
+import xml.etree.ElementTree as ET
+from functools import partial
+
+from PySide import QtCore
+from PySide import QtGui
+        
 ################################################################################
 #
 ################################################################################
 
-class LBLauncher:
+class LBArgumentParser(argparse.ArgumentParser):
+    def __init__(self,appid):
+        super(LBArgumentParser,self).__init__()
+        
+        cfgroot    = os.path.join(os.getenv("HOME"),'/.lb')
+        appcfgroot = os.path.join(cfgroot,appid)
+         
+        self.add_argument(
+            '-s',
+            '--settings-root',
+            help='the settings root',
+            default=appcfgroot)
+            
+    def parse(self):
+        return self.parse_args()
+        
+################################################################################
+#
+################################################################################
+
+class LBLauncher(QtGui.QSystemTrayIcon):
+    """
+    LBLauncher.
+    """
     def __init__(self):
-        self.__menu = gtk.Menu()
-
-    def build(self,cfg):
-        if os.path.exists(cfg):
-            tree = ET.parse(cfg)
-            self.__process(tree.getroot(),self.__menu)
-
-    def run(self):
-        self.__add_menu_separator(self.__menu)
-        self.__add_menu_item(
-            k_menu    = self.__menu,
-            k_label   = "Quit",
-            k_submenu = False,
-            k_icon    = gtk.STOCK_QUIT,
-            k_data    = '__QUIT'
-        )
-
-        ind = AI.Indicator("lb_menu",gtk.STOCK_NETWORK,AI.CATEGORY_APPLICATION_STATUS)
-        ind.set_label("Launch")
-        ind.set_status(AI.STATUS_ACTIVE)
-        ind.set_menu(self.__menu)
-        gtk.main()
-
-    def __process(self,root,menu):
+        QtGui.QSystemTrayIcon.__init__(self)
+        self.cfg      = None
+        self.ticons   = None
+        self.cfgpath  = None
+    
+    ############################################################################
+    #
+    ############################################################################
+    
+    def setup(self,settings):
+        self.cfgroot = settings
+        self.cfgpath = os.path.join(self.cfgroot,'settings.xml')
+        if(os.path.exists(self.cfgpath)):
+            self.cfg    = ET.parse(self.cfgpath)
+            self.ticons = self.cfg.getroot().find('tray-icons')
+            
+            self.__create_menu()
+            
+            self.setIcon(self.__get_icon('main'))
+        
+    ############################################################################
+    #
+    ############################################################################
+    
+    def __refresh(self):
+        pass
+    
+    def __terdown(self):
+        QtCore.QCoreApplication.instance().quit()
+        
+    def __exec(self,data):
+        cmd  = data['cmd']
+        args = data['args']
+        os.spawnvp(os.P_NOWAIT,cmd,[cmd] + args)
+        os.wait3(os.WNOHANG)
+        
+    ############################################################################
+    #
+    ############################################################################
+                 
+    def __create_menu(self):
+        
+        self.trayIconMenu = QtGui.QMenu()
+        
+        self.__fill_menu(self.cfg.getroot(),self.trayIconMenu)
+        
+        self.trayIconMenu.addSeparator()
+        self.trayIconMenu.addAction(self.__create_action('Refresh','refresh',self.__refresh))
+        self.trayIconMenu.addAction(self.__create_action('Quit'   ,'quit'   ,self.__terdown))
+        
+        self.setContextMenu(self.trayIconMenu)
+     
+                 
+    def __create_action(self,text,icon=None,slot=None):
+        action = QtGui.QAction(self.tr(text),self)
+        if icon is not None:
+            action.setIcon(self.__get_icon(icon))
+                
+        if slot is not None:
+            action.triggered.connect(slot)
+            
+        return action
+        
+    def __get_icon(self,icon):
+        if(self.ticons.find(icon) is not None):
+            return QtGui.QIcon(os.path.join(self.cfgroot,self.ticons.find(icon).text))
+        else:
+            return None
+        
+    ############################################################################
+    #
+    ############################################################################
+        
+    def __fill_menu(self,root,menu):
         for item in root:
-            label = item.get('label')
-            cmd   = item.get('cmd')
-            icon  = item.get('icon')
-            mn    = menu
+            label  = item.get('label')
+            cmd    = item.get('cmd'  )
+            icon   = item.get('icon' )
+            mn     = menu
+            
             if label:
                 if label == 'separator':
-                    self.__add_menu_separator(menu)
-                elif cmd:
-                    if not icon:
-                        icon = gtk.STOCK_EXECUTE
-
-                    args = []
-                    for arg in item:
-                        if arg.tag == 'arg':
-                            args.append(arg.get('value'))
-
-                    mn = self.__add_menu_item(
-                        k_menu    = menu,
-                        k_label   = label,
-                        k_submenu = False,
-                        k_icon    = gtk.STOCK_EXECUTE,
-                        k_data    = {
-                            'cmd'  : cmd,
-                            'args' : args
-                        }
-                    )
+                    menu.addSeparator()
+                elif cmd is not None:
+                    mn.addAction(self.__create_action(
+                        label,
+                        icon,
+                        partial(self.__exec, { 
+                            'cmd'  : cmd, 
+                            'args' : [ arg.get('value') for arg in item if arg.tag == 'arg'] })
+                    ))
                 else:
-                    if not icon:
-                        icon = gtk.STOCK_DIRECTORY
+                    tmpmn = QtGui.QMenu(label);
+                    if icon is not None:
+                        tmpmn.setIcon(self.__get_icon(icon))
+                        
+                    mn.addMenu(tmpmn)
+                    mn = tmpmn
 
-                    mn = self.__add_menu_item(
-                        k_menu    = menu ,
-                        k_label   = label,
-                        k_submenu = True,
-                        k_icon    = gtk.STOCK_DIRECTORY
-                    )
-
-            self.__process(item,mn)
-
-    def __add_menu_item(self,**kvargs):
-        mn = kvargs['k_menu'];
-
-        mi = gtk.ImageMenuItem(kvargs['k_label'])
-        mi.set_sensitive(True)
-
-        if 'k_icon' in kvargs:
-            img = gtk.image_new_from_stock(kvargs['k_icon'],gtk.ICON_SIZE_MENU)
-            img.show()
-            mi.set_image(img)
-
-        if 'k_data' in kvargs:
-            mi.connect("activate",self.__menuitem_callback,kvargs['k_data'])
-
-        if 'k_submenu' in kvargs:
-            if kvargs['k_submenu']:
-                mn = gtk.Menu()
-                mi.set_submenu(mn)
-
-        mi.show()
-        kvargs['k_menu'].append(mi)
-
-        return mn
-
-    def __add_menu_separator(self,menu):
-        sep = gtk.SeparatorMenuItem()
-        sep.show()
-        menu.append(sep)
-
-    def __menuitem_callback(self,w,item):
-        if item:
-            if item == '__QUIT':
-                sys.exit(0)
-            else:
-                cmd  = item['cmd']
-                args = item['args']
-                os.spawnvp(os.P_NOWAIT,cmd,[cmd] + args)
-                os.wait3(os.WNOHANG)
-        else:
-            pass
-
+            self.__fill_menu(item,mn)
+            
 ################################################################################
 #
 ################################################################################
-
-if __name__ == '__main__':
-    lbl = LBLauncher()
-
-    if len(sys.argv) == 2:
-        lbl.build(sys.argv[1])
-    else:
-        lbl.build(os.getenv("HOME") + "/.lb_launcher/settings.xml");
-
-    lbl.run()
-
+    
+if __name__=='__main__':
+    config = LBArgumentParser('lb_launcher')
+    args   = config.parse()
+    
+    if(args.settings_root):
+        app = QtGui.QApplication(sys.argv)
+        
+        win = LBLauncher()
+        win.setup(args.settings_root)
+        win.show()
+        
+        sys.exit(app.exec_())

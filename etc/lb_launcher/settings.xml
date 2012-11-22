@@ -2,7 +2,35 @@
 <launcher>
     <tray-icons> 
         <main>images/launcher.png</main>
-        <quit>images/control_eject.png</quit>
+        <quit>images/control_eject_blue.png</quit>
         <refresh>images/arrow_refresh.png</refresh>
+        <terminal>images/application_osx_terminal.png</terminal>
     </tray-icons>
+    
+    <!--  ****************************************************************** -->
+    <!--                                                                      -->
+    <!--  ****************************************************************** -->
+    
+    <item label="Terminal" cmd="/usr/bin/open" icon="terminal">
+        <arg value="/Applications/Utilities/Terminal.app"/>
+    </item>
+    <item label="MacVim"  cmd="/usr/bin/open">
+        <arg value="/Applications/MacVim.app"/>
+    </item>
+    
+    <item label="separator"/>
+    
+    <item label="mac">
+	    <item label="Terminal" cmd="/usr/bin/open" icon="terminal">
+	        <arg value="/Applications/Utilities/Terminal.app"/>
+	    </item>
+	    <item label="MacVim"  cmd="/usr/bin/open">
+	        <arg value="/Applications/MacVim.app"/>
+	    </item>
+    </item>
+    
+    <!--  ****************************************************************** -->
+    <!--                                                                      -->
+    <!--  ****************************************************************** -->
+    
 </launcher>
