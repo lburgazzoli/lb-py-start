@@ -63,10 +63,10 @@ class LBLauncher(QtGui.QSystemTrayIcon):
     """
     def __init__(self):
         QtGui.QSystemTrayIcon.__init__(self)
-        self.cfg     = None
-        self.ticons  = None
-        self.cfgpath = None
-        self.actions = {}
+        self.cfg      = None
+        self.ticons   = None
+        self.cfgpath  = None
+        self.actions  = {}
     
     ############################################################################
     #
@@ -81,11 +81,7 @@ class LBLauncher(QtGui.QSystemTrayIcon):
             
             self.__create_menu()
             
-            self.setIcon(self.__get_icon_path('main'))
-            
-            return True
-        else:
-            return False   
+            self.setIcon(self.__get_icon('main'))
         
     ############################################################################
     #
@@ -97,36 +93,86 @@ class LBLauncher(QtGui.QSystemTrayIcon):
     def __terdown(self):
         QtCore.QCoreApplication.instance().quit()
         
+    def __exec(self):
+        action = "";
+        cmd  = self.actions[action]['cmd']
+        args = self.actions[action]['args']
+        os.spawnvp(os.P_NOWAIT,cmd,[cmd] + args)
+        os.wait3(os.WNOHANG)
+        
     ############################################################################
     #
     ############################################################################
-        
+                 
     def __create_menu(self):
-        self.actions['refresh'] = self.__create_action('Refresh','refresh',self.__refresh)
-        self.actions['quit'   ] = self.__create_action('Quit'   ,'quit'   ,self.__terdown)
+        self.actions['refresh'] = { 'act' : self.__create_action('Refresh','refresh',self.__refresh) }
+        self.actions['quit'   ] = { 'act' : self.__create_action('Quit'   ,'quit'   ,self.__terdown) }
         
         self.trayIconMenu = QtGui.QMenu()
-        self.trayIconMenu.addAction(self.actions['refresh'])
+        
+        self.__fill_menu(self.cfg.getroot(),self.trayIconMenu)
+        
         self.trayIconMenu.addSeparator()
-        self.trayIconMenu.addAction(self.actions['quit'])
+        self.trayIconMenu.addAction(self.actions['refresh']['act'])
+        self.trayIconMenu.addAction(self.actions['quit']['act'])
         
         self.setContextMenu(self.trayIconMenu)
-            
+     
+                 
     def __create_action(self,text,icon=None,slot=None):
         action = QtGui.QAction(self.tr(text),self)
         if icon is not None:
-            action.setIcon(self.__get_icon_path(icon))
+            action.setIcon(self.__get_icon(icon))
                 
         if slot is not None:
             action.triggered.connect(slot)
             
         return action
         
-    def __get_icon_path(self,icon):
+    def __get_icon(self,icon):
         if(self.ticons.find(icon) is not None):
             return QtGui.QIcon(os.path.join(self.cfgroot,self.ticons.find(icon).text))
         else:
             return None
+        
+    ############################################################################
+    #
+    ############################################################################
+        
+    def __fill_menu(self,root,menu):
+        for item in root:
+            itemid = item.get('id')
+            label  = item.get('label')
+            cmd    = item.get('cmd'  )
+            icon   = item.get('icon' )
+            mn     = menu
+            
+            if label:
+                if label == 'separator':
+                    menu.addSeparator()
+                elif cmd:
+                    args = []
+                    for arg in item:
+                        if arg.tag == 'arg':
+                            args.append(arg.get('value'))
+
+                    self.actions[id] = {
+                        'id'   : itemid,
+                        'act'  : self.__create_action(label,icon,None),
+                        'cmd'  : cmd, 
+                        'args' : args 
+                    }
+                    
+                    mn.addAction(self.actions[itemid]['act'])
+                    
+                else:
+                    nm = QtGui.QMenu(label);
+                    if icon is not None:
+                        nm.setIcon(self.__get_icon(icon))
+                        
+                    mn = mn.addMenu(nm)
+
+            self.__fill_menu(item,mn)
             
 ################################################################################
 #
@@ -138,7 +184,9 @@ if __name__=='__main__':
     
     if(args.settings_root):
         app = QtGui.QApplication(sys.argv)
+        
         win = LBLauncher()
-        if(win.setup(args.settings_root)):
-            win.show()
-            sys.exit(app.exec_())
+        win.setup(args.settings_root)
+        win.show()
+        
+        sys.exit(app.exec_())
