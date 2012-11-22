@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='us-ascii'?> 
+<launcher>
+    <tray-icons> 
+        <main>images/launcher.png</main>
+        <quit>images/control_eject.png</quit>
+        <refresh>images/arrow_refresh.png</refresh>
+    </tray-icons>
+</launcher>
