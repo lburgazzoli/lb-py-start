@@ -29,7 +29,7 @@ import sys
 import argparse
 
 import xml.etree.ElementTree
-import functools.partial
+from functools import partial
 
 from PySide import QtCore
 from PySide import QtGui
@@ -58,9 +58,9 @@ class LBArgumentParser(argparse.ArgumentParser):
 #
 ################################################################################
 
-class LBLauncher(QtGui.QSystemTrayIcon):
+class PyStart(QtGui.QSystemTrayIcon):
     """
-    LBLauncher.
+    PyStart.
     """
     def __init__(self):
         QtGui.QSystemTrayIcon.__init__(self)
@@ -154,7 +154,7 @@ class LBLauncher(QtGui.QSystemTrayIcon):
                     mn.addAction(self.__create_action(
                         label,
                         icon,
-                        functools.partial(self.__exec, { 
+                        partial(self.__exec, { 
                             'cmd'  : cmd, 
                             'args' : [ arg.get('value') for arg in item if arg.tag == 'arg'] })
                     ))
@@ -179,7 +179,7 @@ if __name__=='__main__':
     if(args.settings_root):
         app = QtGui.QApplication(sys.argv)
         
-        win = LBLauncher()
+        win = PyStart()
         win.setup(args.settings_root)
         win.show()
         
