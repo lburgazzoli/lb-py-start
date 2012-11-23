@@ -28,8 +28,8 @@ import os
 import sys
 import argparse
 
-import xml.etree.ElementTree as ET
-from functools import partial
+import xml.etree.ElementTree
+import functools.partial
 
 from PySide import QtCore
 from PySide import QtGui
@@ -76,7 +76,7 @@ class LBLauncher(QtGui.QSystemTrayIcon):
         self.cfgroot = settings
         self.cfgpath = os.path.join(self.cfgroot,'settings.xml')
         if(os.path.exists(self.cfgpath)):
-            self.cfg    = ET.parse(self.cfgpath)
+            self.cfg    = xml.etree.ElementTree.parse(self.cfgpath)
             self.ticons = self.cfg.getroot().find('tray-icons')
             
             self.__create_menu()
@@ -96,8 +96,12 @@ class LBLauncher(QtGui.QSystemTrayIcon):
     def __exec(self,data):
         cmd  = data['cmd']
         args = data['args']
-        os.spawnvp(os.P_NOWAIT,cmd,[cmd] + args)
-        os.wait3(os.WNOHANG)
+        
+        if os.name == "nt":
+            os.spawnv(os.P_NOWAIT,cmd,[cmd] + args)
+        else:
+            os.spawnvp(os.P_NOWAIT,cmd,[cmd] + args)
+            os.wait3(os.WNOHANG)
         
     ############################################################################
     #
@@ -150,7 +154,7 @@ class LBLauncher(QtGui.QSystemTrayIcon):
                     mn.addAction(self.__create_action(
                         label,
                         icon,
-                        partial(self.__exec, { 
+                        functools.partial(self.__exec, { 
                             'cmd'  : cmd, 
                             'args' : [ arg.get('value') for arg in item if arg.tag == 'arg'] })
                     ))
