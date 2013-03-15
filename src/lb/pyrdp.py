@@ -19,12 +19,17 @@ import sys
 import ConfigParser
 
 from PySide import QtGui
+from PySide import QtCore
 
 ################################################################################
 #
 ################################################################################
 
 class PyRdp(QtGui.QWidget):
+    REMMINA  = '/usr/bin/remmina'
+    RDESKTOP = '/usr/bin/rdesktop'
+
+
     def __init__(self):
         super(PyRdp, self).__init__()
         self.combo = None
@@ -43,6 +48,12 @@ class PyRdp(QtGui.QWidget):
         self.setLayout(vbox)
         self.setWindowTitle('PyRdp')
 
+    def keyPressEvent(self, e):
+        if e.key() == QtCore.Qt.Key_Escape:
+            self.close()
+        elif e.key() == QtCore.Qt.Key_Return:
+            self.__run(self.combo.currentText())
+
     def __load_remmina(self):
         rroot = os.path.join(os.getenv("HOME"),'.remmina')
         if(os.path.exists(rroot)):
@@ -53,6 +64,18 @@ class PyRdp(QtGui.QWidget):
                     srv = config.get('remmina','server')
                     self.combo.addItem(srv)
                     self.remf[srv] = os.path.join(rroot,fname)
+
+    def __run(self,server):
+        if server in self.remf:
+            self.__spawn(self.REMMINA,['-c',self.remf[server]])
+            self.close()
+        else:
+            self.__spawn(self.REMMINA,['-g','1024x768',self.remf[server]])
+            self.close()
+
+    def __spawn(self,cmd,args):
+        os.spawnvp(os.P_NOWAIT,cmd,[cmd] + args)
+        os.wait3(os.WNOHANG)
 
 
 ################################################################################
@@ -65,5 +88,6 @@ if __name__ == '__main__':
     wid = PyRdp()
     wid.initui()
     wid.show()
+
 
     sys.exit(app.exec_())
