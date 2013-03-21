@@ -175,7 +175,7 @@ class PyStart(QtGui.QSystemTrayIcon):
                 if config.has_section('remmina'):
                     tmpmn.addAction(self.__create_action(
                         config.get('remmina','server'),
-                        None,
+                        'remmina',
                         partial(self.__exec, {
                             'cmd'  : '/usr/bin/remmina',
                             'args' : [ '-c',os.path.join(rroot,fname) ]
