@@ -78,9 +78,6 @@ class PyStart(QtGui.QSystemTrayIcon):
     #
     ############################################################################
 
-    def __refresh(self):
-        pass
-
     def __teardown(self):
         QtCore.QCoreApplication.instance().quit()
 
@@ -110,8 +107,7 @@ class PyStart(QtGui.QSystemTrayIcon):
         self.trayIconMenu.addSeparator()
         self.__fill_remmina_menu(self.trayIconMenu)
         self.trayIconMenu.addSeparator()
-        #self.trayIconMenu.addAction(self.__create_action('Refresh','refresh',self.__refresh))
-        self.trayIconMenu.addAction(self.__create_action('Quit'   ,'quit'   ,self.__teardown))
+        self.trayIconMenu.addAction(self.__create_action('Quit','quit',self.__teardown))
 
         self.setContextMenu(self.trayIconMenu)
 
@@ -199,7 +195,7 @@ class PyStart(QtGui.QSystemTrayIcon):
 
                     if config.has_section('remmina'):
                         tmpmn.addAction(self.__create_action(
-                            config.get('remmina','server'),
+                            config.get('remmina','name'),
                             'remmina',
                             partial(self.__exec, {
                                 'cmd'  : '/usr/bin/remmina',

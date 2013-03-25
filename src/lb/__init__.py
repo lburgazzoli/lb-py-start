@@ -14,6 +14,17 @@
 #  limitations under the License.
 #
 
+import os
+import sys
+import argparse
+
+import ConfigParser
+import xml.etree.ElementTree
+from functools import partial
+
+from PySide import QtCore
+from PySide import QtGui
+
 ################################################################################
 #
 ################################################################################
@@ -27,3 +38,18 @@ class IPlugin:
     
     def run(self,**kwargs):
         pass
+
+################################################################################
+#
+################################################################################
+
+class RemminaPlugin(IPlugin):	
+	def __init__(self):
+		self.rmhome = os.path.join(os.getenv("HOME"),'.remmina')
+    
+    def setup(self,**kwargs):
+        pass
+    
+    def run(self,**kwargs):
+        pass
+
