@@ -81,7 +81,7 @@ class PyStart(QtGui.QSystemTrayIcon):
     def __refresh(self):
         pass
 
-    def __terdown(self):
+    def __teardown(self):
         QtCore.QCoreApplication.instance().quit()
 
     def __exec(self,data):
@@ -99,7 +99,11 @@ class PyStart(QtGui.QSystemTrayIcon):
     ############################################################################
 
     def __create_menu(self):
-
+        """
+        Build main menu
+        - read items from xml settings
+        - autogenerate menu for remmina settings
+        """
         self.trayIconMenu = QtGui.QMenu()
 
         self.__fill_menu(self.cfg.getroot(),self.trayIconMenu)
@@ -107,7 +111,7 @@ class PyStart(QtGui.QSystemTrayIcon):
         self.__fill_remmina_menu(self.trayIconMenu)
         self.trayIconMenu.addSeparator()
         #self.trayIconMenu.addAction(self.__create_action('Refresh','refresh',self.__refresh))
-        self.trayIconMenu.addAction(self.__create_action('Quit'   ,'quit'   ,self.__terdown))
+        self.trayIconMenu.addAction(self.__create_action('Quit'   ,'quit'   ,self.__teardown))
 
         self.setContextMenu(self.trayIconMenu)
 
@@ -133,6 +137,13 @@ class PyStart(QtGui.QSystemTrayIcon):
     ############################################################################
 
     def __fill_menu(self,root,menu):
+        """
+        XML configuration example:
+
+            <item label="Terminal" cmd="/usr/bin/open" icon="terminal">
+                <arg value="/Applications/Utilities/Terminal.app"/>
+            </item>
+        """
         for item in root:
             label  = item.get('label')
             cmd    = item.get('cmd'  )
@@ -148,7 +159,8 @@ class PyStart(QtGui.QSystemTrayIcon):
                         icon,
                         partial(self.__exec, {
                             'cmd'  : cmd,
-                            'args' : [ arg.get('value') for arg in item if arg.tag == 'arg'] })
+                            'args' : [ arg.get('value') for arg in item if arg.tag == 'arg'] 
+                        })
                     ))
                 else:
                     tmpmn = QtGui.QMenu(label);
@@ -160,7 +172,16 @@ class PyStart(QtGui.QSystemTrayIcon):
 
             self.__fill_menu(item,mn)
 
+
     def __fill_remmina_menu(self,menu):
+        """
+        This method reads remmina's configuration files in $HOME/.remmina and 
+        creates an entry for each file.
+
+            [remmina] 
+            server=serner_name 
+
+        """
         rroot = os.path.join(os.getenv("HOME"),'.remmina')
         if(os.path.exists(rroot)):
             tmpmn = QtGui.QMenu("Remmina");
