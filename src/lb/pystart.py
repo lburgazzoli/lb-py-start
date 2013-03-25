@@ -193,17 +193,19 @@ class PyStart(QtGui.QSystemTrayIcon):
 
             menu.addMenu(tmpmn)
             for fname in os.listdir(rroot):
-                config = ConfigParser.RawConfigParser()
-                config.read(os.path.join(rroot,fname))
-                if config.has_section('remmina'):
-                    tmpmn.addAction(self.__create_action(
-                        config.get('remmina','server'),
-                        'remmina',
-                        partial(self.__exec, {
-                            'cmd'  : '/usr/bin/remmina',
-                            'args' : [ '-c',os.path.join(rroot,fname) ]
-                        })
-                    ))
+                if fname.endswith('.remmina'):
+                    config = ConfigParser.RawConfigParser()
+                    config.read(os.path.join(rroot,fname))
+
+                    if config.has_section('remmina'):
+                        tmpmn.addAction(self.__create_action(
+                            config.get('remmina','server'),
+                            'remmina',
+                            partial(self.__exec, {
+                                'cmd'  : '/usr/bin/remmina',
+                                'args' : [ '-c',os.path.join(rroot,fname) ]
+                            })
+                        ))
 
 ################################################################################
 #
