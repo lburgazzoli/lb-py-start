@@ -119,7 +119,9 @@ class PyStart(QtGui.QSystemTrayIcon):
     def __create_action(self,text,icon=None,slot=None):
         action = QtGui.QAction(self.tr(text),self)
         if icon is not None:
-            action.setIcon(self.__get_icon(icon))
+            ic = self.__get_icon(icon)
+            if ic:
+                action.setIcon(ic)
 
         if slot is not None:
             action.triggered.connect(slot)
