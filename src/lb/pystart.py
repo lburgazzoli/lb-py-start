@@ -157,7 +157,7 @@ class PyStart(QtGui.QSystemTrayIcon):
                         icon,
                         partial(self.__exec, {
                             'cmd'  : cmd,
-                            'args' : [ arg.get('value') for arg in item if arg.tag == 'arg'] 
+                            'args' : [ arg.get('value') for arg in item if arg.tag == 'arg']
                         })
                     ))
                 else:
@@ -173,25 +173,25 @@ class PyStart(QtGui.QSystemTrayIcon):
 
     def __fill_remmina_menu(self,menu):
         """
-        This method reads remmina's configuration files in $HOME/.remmina and 
+        This method reads remmina's configuration files in $HOME/.remmina and
         creates an entry for each file.
 
-            [remmina] 
-            server=serner_name 
+            [remmina]
+            server=serner_name
 
         """
-        rroot = os.path.join(os.getenv("HOME"),'.remmina')
-        if(os.path.exists(rroot)):
-            tmpmn = QtGui.QMenu("Remmina");
-            rdpi = self.__get_icon('remmina')
+        remroot = os.path.join(os.getenv("HOME"),'.remmina')
+        if(os.path.exists(remroot)):
+            tmpmn P= QtGui.QMenu("Remmina");
+            rdpi  = self.__get_icon('remmina')
             if rdpi is not None:
                 tmpmn.setIcon(rdpi)
 
             menu.addMenu(tmpmn)
-            for fname in os.listdir(rroot):
+            for fname in os.listdir(remroot):
                 if fname.endswith('.remmina'):
                     config = ConfigParser.RawConfigParser()
-                    config.read(os.path.join(rroot,fname))
+                    config.read(os.path.join(remroot,fname))
 
                     if config.has_section('remmina'):
                         tmpmn.addAction(self.__create_action(
@@ -199,7 +199,7 @@ class PyStart(QtGui.QSystemTrayIcon):
                             'remmina',
                             partial(self.__exec, {
                                 'cmd'  : '/usr/bin/remmina',
-                                'args' : [ '-c',os.path.join(rroot,fname) ]
+                                'args' : [ '-c',os.path.join(remroot,fname) ]
                             })
                         ))
 
