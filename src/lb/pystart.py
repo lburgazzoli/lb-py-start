@@ -29,11 +29,11 @@ from PySide import QtGui
 #
 ################################################################################
 
-class LBArgumentParser(argparse.ArgumentParser):
+class PyStartArgParser(argparse.ArgumentParser):
     def __init__(self,appid):
-        super(LBArgumentParser,self).__init__()
+        super(PyStartArgParser,self).__init__()
 
-        cfgroot    = os.path.join(os.getenv("HOME"),'/.lb')
+        cfgroot    = os.path.join(os.getenv("HOME"),'/.config/lb')
         appcfgroot = os.path.join(cfgroot,appid)
 
         self.add_argument(
@@ -55,9 +55,11 @@ class PyStart(QtGui.QSystemTrayIcon):
     """
     def __init__(self):
         QtGui.QSystemTrayIcon.__init__(self)
-        self.cfg      = None
-        self.ticons   = None
-        self.cfgpath  = None
+        self.cfg            = None
+        self.ticons         = None
+        self.cfgpath        = None
+        self.cfgroot        = None
+        self.tray_icon_menu = None
 
     ############################################################################
     #
@@ -66,7 +68,7 @@ class PyStart(QtGui.QSystemTrayIcon):
     def setup(self,settings):
         self.cfgroot = settings
         self.cfgpath = os.path.join(self.cfgroot,'settings.xml')
-        if(os.path.exists(self.cfgpath)):
+        if os.path.exists(self.cfgpath):
             self.cfg    = xml.etree.ElementTree.parse(self.cfgpath)
             self.ticons = self.cfg.getroot().find('tray-icons')
 
@@ -78,17 +80,19 @@ class PyStart(QtGui.QSystemTrayIcon):
     #
     ############################################################################
 
-    def __teardown(self):
+    @staticmethod
+    def __teardown():
         QtCore.QCoreApplication.instance().quit()
 
-    def __exec(self,data):
-        cmd  = data['cmd']
-        args = data['args']
+    @staticmethod
+    def __exec(data):
+        cmd = data['cmd']
+        cmdargs = data['args']
 
         if os.name == "nt":
-            os.spawnv(os.P_NOWAIT,cmd,[cmd] + args)
+            os.spawnv(os.P_NOWAIT, cmd, [cmd] + cmdargs)
         else:
-            os.spawnvp(os.P_NOWAIT,cmd,[cmd] + args)
+            os.spawnvp(os.P_NOWAIT, cmd, [cmd] + cmdargs)
             os.wait3(os.WNOHANG)
 
     ############################################################################
@@ -101,32 +105,38 @@ class PyStart(QtGui.QSystemTrayIcon):
         - read items from xml settings
         - autogenerate menu for remmina settings
         """
-        self.trayIconMenu = QtGui.QMenu()
+        self.tray_icon_menu = QtGui.QMenu()
 
-        self.__fill_menu(self.cfg.getroot(),self.trayIconMenu)
-        self.trayIconMenu.addSeparator()
-        self.__fill_remmina_menu(self.trayIconMenu)
-        self.trayIconMenu.addSeparator()
-        self.trayIconMenu.addAction(self.__create_action('Quit','quit',self.__teardown))
+        self.__fill_menu(self.cfg.getroot(),self.tray_icon_menu)
+        self.tray_icon_menu.addSeparator()
+        self.__fill_remmina_menu(self.tray_icon_menu)
+        self.tray_icon_menu.addSeparator()
+        self.tray_icon_menu.addAction(self.__create_action('Quit', 'quit', self.__teardown))
 
-        self.setContextMenu(self.trayIconMenu)
+        self.setContextMenu(self.tray_icon_menu)
 
-
-    def __create_action(self,text,icon=None,slot=None):
-        action = QtGui.QAction(self.tr(text),self)
+    def __create_action(self, text, icon=None, slot=None):
+        action = QtGui.QAction(self.tr(text), self)
         if icon is not None:
             ic = self.__get_icon(icon)
             if ic:
                 action.setIcon(ic)
+                action.setIconVisibleInMenu(True)
 
         if slot is not None:
             action.triggered.connect(slot)
 
         return action
 
-    def __get_icon(self,icon):
-        if(self.ticons.find(icon) is not None):
-            return QtGui.QIcon(os.path.join(self.cfgroot,self.ticons.find(icon).text))
+    def __get_icon(self, icon):
+        if self.ticons.find(icon) is not None:
+            ipath = self.ticons.find(icon).text
+            if os.path.isabs(ipath):
+                fpath = ipath
+            else:
+                fpath = os.path.join(self.cfgroot, ipath)
+
+            return QtGui.QIcon(fpath)
         else:
             return None
 
@@ -170,7 +180,6 @@ class PyStart(QtGui.QSystemTrayIcon):
 
             self.__fill_menu(item,mn)
 
-
     def __fill_remmina_menu(self,menu):
         """
         This method reads remmina's configuration files in $HOME/.remmina and
@@ -181,8 +190,8 @@ class PyStart(QtGui.QSystemTrayIcon):
 
         """
         remroot = os.path.join(os.getenv("HOME"),'.remmina')
-        if(os.path.exists(remroot)):
-            tmpmn P= QtGui.QMenu("Remmina");
+        if os.path.exists(remroot):
+            tmpmn = QtGui.QMenu("Remmina");
             rdpi  = self.__get_icon('remmina')
             if rdpi is not None:
                 tmpmn.setIcon(rdpi)
@@ -208,10 +217,10 @@ class PyStart(QtGui.QSystemTrayIcon):
 ################################################################################
 
 if __name__=='__main__':
-    config = LBArgumentParser('lb_launcher')
+    config = PyStartArgParser('lb_launcher')
     args   = config.parse()
 
-    if(args.settings_root):
+    if args.settings_root:
         app = QtGui.QApplication(sys.argv)
 
         win = PyStart()
