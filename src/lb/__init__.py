@@ -1,7 +1,7 @@
 #
-#  Copyright 2012 the original author or authors.
+# Copyright 2014 lb.
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
+# Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
 #
@@ -13,43 +13,3 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-
-import os
-import sys
-import argparse
-
-import ConfigParser
-import xml.etree.ElementTree
-from functools import partial
-
-from PySide import QtCore
-from PySide import QtGui
-
-################################################################################
-#
-################################################################################
-
-class IPlugin:
-    def __init__(self):
-        pass
-    
-    def setup(self,**kwargs):
-        pass
-    
-    def run(self,**kwargs):
-        pass
-
-################################################################################
-#
-################################################################################
-
-class RemminaPlugin(IPlugin):	
-	def __init__(self):
-		self.rmhome = os.path.join(os.getenv("HOME"),'.remmina')
-    
-    def setup(self,**kwargs):
-        pass
-    
-    def run(self,**kwargs):
-        pass
-
