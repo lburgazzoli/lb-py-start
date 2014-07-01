@@ -13,16 +13,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 #
-
 import os
 import sys
-import argparse
-
-import configparser
 import json
-import pprint
 
-from functools import partial
+import functools
 
 from PySide import QtCore
 from PySide import QtGui
@@ -31,35 +26,13 @@ from PySide import QtGui
 #
 ################################################################################
 
-class PyStartArgParser(argparse.ArgumentParser):
-    def __init__(self,appid):
-        super(PyStartArgParser,self).__init__()
-
-        cfgroot    = os.path.join(os.getenv("HOME"), '/.config/lb')
-        appcfgroot = os.path.join(cfgroot, appid)
-
-        self.add_argument(
-            '-s',
-            '--settings-root',
-            help='the settings root',
-            default=appcfgroot)
-
-    def parse(self):
-        return self.parse_args()
-
-################################################################################
-#
-################################################################################
-
 class PyStart(QtGui.QSystemTrayIcon):
-    """
-    PyStart.
-    """
     def __init__(self):
         QtGui.QSystemTrayIcon.__init__(self)
         self.json_data      = None
         self.cfg            = None
         self.ticons         = None
+        self.tcommands      = None
         self.cfgpath        = None
         self.cfgroot        = None
         self.tray_icon_menu = None
@@ -68,13 +41,14 @@ class PyStart(QtGui.QSystemTrayIcon):
     #
     ############################################################################
 
-    def setup(self,settings):
+    def setup(self, settings):
         self.cfgroot = settings
-        self.cfgpath = os.path.join(self.cfgroot,'settings.json')
+        self.cfgpath = os.path.join(self.cfgroot, 'settings.json')
         if os.path.exists(self.cfgpath):
             self.json_data = open(self.cfgpath)
             self.cfg       = json.load(self.json_data) 
             self.ticons    = self.cfg['icons']
+            self.tcommands = self.cfg['commands']
 
             self.__create_menu()
 
@@ -106,28 +80,23 @@ class PyStart(QtGui.QSystemTrayIcon):
     ############################################################################
 
     def __create_menu(self):
-        """
-        Build main menu
-        - read items from json settings
-        - autogenerate menu for remmina settings (not yet)
-        """
         self.tray_icon_menu = QtGui.QMenu()
 
-        self.__fill_menu(self.cfg['items'],self.tray_icon_menu)
+        self.__fill_menu(self.cfg['items'], self.tray_icon_menu)
         self.tray_icon_menu.addSeparator()
-        self.__fill_remmina_menu(self.tray_icon_menu)
-        self.tray_icon_menu.addSeparator()
-        self.tray_icon_menu.addAction(self.__create_action(
-            'Quit', 
-            'launcher-quit', 
-            self.__teardown)
+        self.tray_icon_menu.addAction(
+            self.__create_action(
+                'Quit',
+                'launcher-quit',
+                self.__teardown
+            )
         )
 
         self.setContextMenu(self.tray_icon_menu)
 
     def __create_action(self, text, icon=None, slot=None):
         action = QtGui.QAction(self.tr(text), self)
-        if icon is not None:
+        if icon:
             ic = self.__get_icon(icon)
             if ic:
                 action.setIcon(ic)
@@ -139,64 +108,48 @@ class PyStart(QtGui.QSystemTrayIcon):
         return action
 
     def __get_icon(self, icon):
-        if icon in self.ticons.keys():
-            ipath = self.ticons[icon]
-        else: 
-            ipath = icon
+        if icon is not None:
+            if icon in self.ticons.keys():
+                ipath = self.ticons[icon]
+            else:
+                ipath = icon
 
-        if os.path.isabs(ipath):
-            return QtGui.QIcon(ipath)
+            if os.path.isabs(ipath):
+                return QtGui.QIcon(ipath)
+            else:
+                return QtGui.QIcon(os.path.join(self.cfgroot, ipath))
         else:
-            return QtGui.QIcon(os.path.join(self.cfgroot, ipath))
+            return None
 
     ############################################################################
     #
     ############################################################################
 
     def __fill_menu(self, items, menu):
-        """
-        "items" : 
-        [ 
-            { 
-                "label" : "section1",
-                "icon"  : "folder",
-                "items" :
-                [
-                    {
-                        "label"        : "command_1",  
-                        "icon"         : "terminal",
-                        "command"      : "run_ssh.sh",
-                        "command-args" : [ "server1" ]
-                    },
-                    {
-                        "label"        : "command_2",  
-                        "icon"         : "terminal",
-                        "command"      : "run_ssh.sh",
-                        "command-args" : [ "server2" ]
-                    }
-                ] 
-            }
-        ]
-        """        
         for item in items:
             label = item['label']
             mn    = menu
+            icon  = None
 
             if label == 'separator':
                 menu.addSeparator()
             elif 'command' in item.keys():
+                command = item['command']
+                if command in self.tcommands:
+                    command = self.tcommands[command]
+
                 mn.addAction(self.__create_action(
                     label,
                     item['icon'],
-                    partial(self.__exec, {
-                        'cmd'  : item['command'],
+                    functools.partial(self.__exec, {
+                        'cmd'  : command,
                         'args' : item['command-args']
                     })
                 ))
             else:
-                tmpmn = QtGui.QMenu(label);
+                tmpmn = QtGui.QMenu(label)
                 if 'icon' in item.keys():
-                    tmpmn.setIcon(self.__get_icon(item['icon']))
+                    tmpmn.setIcon(item['icon'])
 
                 mn.addMenu(tmpmn)
                 mn = tmpmn
@@ -204,52 +157,20 @@ class PyStart(QtGui.QSystemTrayIcon):
             if 'items' in item.keys():
                 self.__fill_menu(item['items'], mn)
 
-    def __fill_remmina_menu(self,menu):
-        """
-        This method reads remmina's configuration files in $HOME/.remmina and
-        creates an entry for each file.
-
-            [remmina]
-            server=serner_name
-
-        """
-        remroot = os.path.join(os.getenv("HOME"),'.remmina')
-        if os.path.exists(remroot):
-            tmpmn = QtGui.QMenu("remmina");
-            rdpi  = self.__get_icon('remmina')
-            if rdpi is not None:
-                tmpmn.setIcon(rdpi)
-
-            menu.addMenu(tmpmn)
-            for fname in os.listdir(remroot):
-                if fname.endswith('.remmina'):
-                    config = configparser.ConfigParser()
-                    config.read(os.path.join(remroot,fname))
-
-                    if config.has_section('remmina'):
-                        tmpmn.addAction(self.__create_action(
-                            config.get('remmina','name'),
-                            'remmina',
-                            partial(self.__exec, {
-                                'cmd'  : '/usr/bin/remmina',
-                                'args' : [ '-c',os.path.join(remroot,fname) ]
-                            })
-                        ))
-
 ################################################################################
 #
 ################################################################################
 
 if __name__=='__main__':
-    config = PyStartArgParser('lb_launcher')
-    args   = config.parse()
+    cfgroot = os.getenv("PYSTART_CFG_ROOT")
+    if not cfgroot:
+        cfgroot = os.path.join(os.getenv("HOME"), '/.config/pystart')
 
-    if args.settings_root:
-        app = QtGui.QApplication(sys.argv)
-        app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, False);
+    app = QtGui.QApplication(sys.argv)
+    app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, False);
 
-        win = PyStart()
-        win.setup(args.settings_root)
-        win.show()
+    win = PyStart()
+    win.setup(cfgroot)
+    win.show()
 
-        sys.exit(app.exec_())
+    sys.exit(app.exec_())

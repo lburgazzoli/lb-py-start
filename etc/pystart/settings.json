@@ -1,0 +1,34 @@
+{
+    "icons" :
+	{
+		"launcher"      : "images/launcher.png",
+		"launcher-quit" : "images/launcher-quit.png",
+		"terminal"      : "images/terminal.png"
+	},
+	"commands" :
+	{
+		"kitty" : "kitty_portable.exe"
+	},
+	"items" :
+	[
+		{
+			"label" : "group1",
+			"items" :
+			[
+				{
+					"label"        : "server1",
+					"icon"         : "terminal",
+					"command"      : "kitty",
+					"command-args" : [
+						"-load" , "profile",
+						"-title", "server1",
+						"-ssh"  , "user@server1"
+					]
+				},
+				{
+					"label" : "sub-menu-2"
+				}
+			]
+	    }
+	]
+}
