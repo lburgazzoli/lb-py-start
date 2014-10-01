@@ -99,6 +99,7 @@ class PyStart(QtGui.QSystemTrayIcon):
             else:
                 ipath = icon
 
+
             if os.path.isabs(ipath):
                 return QtGui.QIcon(ipath)
             else:
@@ -155,7 +156,7 @@ class PyStart(QtGui.QSystemTrayIcon):
 if __name__ == '__main__':
     cfgroot = os.getenv('PYSTART_CFG_ROOT')
     if not cfgroot:
-        cfgroot = os.path.join(os.getenv('HOME'), '/.config/pystart')
+        cfgroot = os.getenv('HOME') + '/.config/pystart'
 
     app = QtGui.QApplication(sys.argv)
     app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, False)
