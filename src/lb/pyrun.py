@@ -18,9 +18,20 @@ class PyRun:
             stream = open(self.cfgpath , 'r') 
             settings = yaml.load(stream)
 
-            for action in settings['actions']:
-                if action['name'] == sys.argv[1] and action['type'] == 'mate-terminal':
-                   self.run_mate_terminal(action)         
+            if sys.argv[1] == 'list':
+                for action in settings['actions']:                
+                    print(action['name'])
+                for action in settings['actions']:
+                    if 'alias' in action:
+                        print(action['alias'])
+            else:
+                for action in settings['actions']:
+                    if action['type'] == 'mate-terminal':
+                        if sys.argv[1] == action['name']:
+                            self.run_mate_terminal(action)
+                        if 'alias' in action:
+                            if sys.argv[1] == action['alias']:
+                                self.run_mate_terminal(action)         
 
             stream.close()
 
