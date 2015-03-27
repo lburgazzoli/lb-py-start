@@ -25,8 +25,6 @@ class PyRun:
             stream.close()
 
     def run_mate_terminal(self, action):
-        print("action = %s"  % action)
-
         command = 'mate-terminal'
         command_args = [
             "--profile=%s" % (action['profile']),
