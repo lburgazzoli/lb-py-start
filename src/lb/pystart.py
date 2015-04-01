@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Copyright 2014 lb.
 #
@@ -25,6 +26,7 @@ from PySide import QtGui
 ################################################################################
 #
 ################################################################################
+
 
 class PyStart(QtGui.QSystemTrayIcon):
     def __init__(self, path):
@@ -156,7 +158,7 @@ class PyStart(QtGui.QSystemTrayIcon):
 if __name__ == '__main__':
     cfgroot = os.getenv('PYSTART_CFG_ROOT')
     if not cfgroot:
-        cfgroot = os.getenv('HOME') + '/.config/pystart'
+        cfgroot = os.getenv('HOME') + '/.config/lb/pystart'
 
     app = QtGui.QApplication(sys.argv)
     app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, False)
